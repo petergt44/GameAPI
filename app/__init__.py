@@ -3,17 +3,57 @@ Initialization file for the Flask application.
 Sets up the Flask app, database, migrations, and blueprints.
 """
 
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, UserMixin
 from flask_cors import CORS
 from config import Config
+from flask_restx import Api
+from flask_swagger_ui import get_swaggerui_blueprint
+
+from flask import Flask, render_template
+
+app = Flask(__name__)
+app.config.from_object(Config)
 
 # Initialize extensions
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
+
+@login_manager.user_loader
+def load_user(user_id):
+    return None  # Return None to indicate no user is logged in
+
+
+class AnonymousUser(UserMixin):
+    """Allows unauthenticated users to access routes without triggering login."""
+    def is_authenticated(self):
+        return False
+
+login_manager.anonymous_user = AnonymousUser
+
+@app.before_request
+def bypass_login_for_swagger():
+    """Disable authentication for Swagger UI."""
+    if request.path.startswith("/swagger"):
+        request._login_disabled = True  # Disable authentication for this request
+
+
+# Swagger UI configuration
+SWAGGER_URL = '/swagger'  # URL for accessing Swagger UI
+API_URL = '/swagger.json'  # URL for the API specification
+
+# Create Swagger UI blueprint
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': 'Game Provider API'
+    }
+)
+
 
 def create_app():
     """
@@ -22,8 +62,6 @@ def create_app():
     Returns:
         Flask: The configured Flask application.
     """
-    app = Flask(__name__)
-    app.config.from_object(Config)
 
     # Initialize extensions with the app
     db.init_app(app)
@@ -31,15 +69,35 @@ def create_app():
     login_manager.init_app(app)
     CORS(app)
 
+    # Initialize Flask-RESTX API
+    api = Api(
+        app,
+        version='1.0',
+        title='Game Provider API',
+        description='A centralized API for third-party game providers',
+        doc='/swagger/'  # Enable Swagger UI at /swagger/
+    )
     # Register blueprints
-    from app.routes.admin import auth, accounts, tokens, logs
-    from app.routes.api import category1 #vblink
+    from app.routes.admin import auth, accounts, tokens, logs, admin_bp
+    from app.routes.api import category1, vblink
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(accounts.bp)
     app.register_blueprint(tokens.bp)
     app.register_blueprint(logs.bp)
+
+    app.register_blueprint(admin_bp)
     # app.register_blueprint(vblink.bp)
     app.register_blueprint(category1.bp)
+
+    # Register Swagger UI blueprint
+    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
+    # Add namespaces to the API
+    from app.routes.api.vblink import vblink_ns
+    from app.routes.api.category1 import category1_ns
+
+    api.add_namespace(vblink_ns)
+    api.add_namespace(category1_ns)
 
     return app
