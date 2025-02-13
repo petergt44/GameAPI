@@ -1,7 +1,3 @@
-Here’s a **markdown template** you can add to your `README.md` file to explain how to test the API and use Swagger for documentation.
-
----
-
 ## **Testing the API**
 
 This section explains how to test the API endpoints using tools like **cURL** or **Postman**.
