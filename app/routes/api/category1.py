@@ -39,6 +39,22 @@ user_model = category1_ns.model('UserResponse', {
     'password': fields.String(description='Password of the new user')
 })
 
+login_model = category1_ns.model('LoginResponse', {
+    'message': fields.String(description='Login status message'),
+    'token': fields.String(description='Authentication token')
+})
+
+
+@category1_ns.route('/login')
+class Category1Login(Resource):
+    @category1_ns.doc('login')
+    @category1_ns.response(200, 'Login successful', login_model)
+    def post(self):
+        """Login to a Category 1 game provider."""
+        service = Category1Service(base_url="https://example.com", username="user", password="pass")
+        return service.login()
+
+
 @category1_ns.route('/add_user')
 class AddUser(Resource):
     @category1_ns.doc('add_user')
