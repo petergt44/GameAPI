@@ -11,6 +11,7 @@ from flask_cors import CORS
 from config import Config
 from flask_restx import Api
 from flask_swagger_ui import get_swaggerui_blueprint
+from flask_caching import Cache
 
 from flask import Flask, render_template
 
@@ -21,6 +22,8 @@ app.config.from_object(Config)
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
+cache = Cache()
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -54,6 +57,14 @@ swaggerui_blueprint = get_swaggerui_blueprint(
     }
 )
 
+# Initialize Flask-RESTX API
+api = Api(
+    app,
+    version='1.0',
+    title='Game Provider API',
+    description='A centralized API for third-party game providers.',
+    doc='/swagger/'  # Enable Swagger UI at /swagger/
+)
 
 def create_app():
     """
@@ -65,39 +76,26 @@ def create_app():
 
     # Initialize extensions with the app
     db.init_app(app)
+    cache.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     CORS(app)
 
-    # Initialize Flask-RESTX API
-    api = Api(
-        app,
-        version='1.0',
-        title='Game Provider API',
-        description='A centralized API for third-party game providers',
-        doc='/swagger/'  # Enable Swagger UI at /swagger/
-    )
-    # Register blueprints
-    from app.routes.admin import auth, accounts, tokens, logs, admin_bp
-    from app.routes.api import category1, vblink
 
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(accounts.bp)
-    app.register_blueprint(tokens.bp)
-    app.register_blueprint(logs.bp)
-
-    app.register_blueprint(admin_bp)
-    # app.register_blueprint(vblink.bp)
-    app.register_blueprint(category1.bp)
+    # Import and add namespaces
+    from app.routes.api.category1 import category1_ns
+    from app.routes.api.category2 import category2_ns
+    from app.routes.api.category3 import category3_ns
+    from app.routes.api.category4 import category4_ns
+    from app.routes.api.vblink import vblink_ns
+    
+    api.add_namespace(category1_ns)
+    api.add_namespace(category2_ns)
+    api.add_namespace(category3_ns)
+    api.add_namespace(category4_ns)
+    api.add_namespace(vblink_ns)
 
     # Register Swagger UI blueprint
     app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-    # Add namespaces to the API
-    from app.routes.api.vblink import vblink_ns
-    from app.routes.api.category1 import category1_ns
-
-    api.add_namespace(vblink_ns)
-    api.add_namespace(category1_ns)
 
     return app
