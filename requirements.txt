@@ -1,11 +1,13 @@
 alembic==1.7.7
 aniso8601==10.0.0
 attrs==22.2.0
+cachelib==0.9.0
 certifi==2025.1.31
 charset-normalizer==2.0.12
 click==8.0.4
-dataclasses 
+dataclasses==0.6
 Flask==2.0.3
+Flask-Caching==2.3.0
 Flask-Cors==5.0.0
 Flask-Login==0.5.0
 Flask-Migrate==4.0.1
@@ -24,6 +26,7 @@ MarkupSafe==2.0.1
 multidict==5.2.0
 pkg_resources==0.0.0
 psycopg2-binary==2.9.5
+pycryptodome==3.21.0
 pyrsistent==0.18.0
 python-dotenv==0.20.0
 pytz==2025.1
