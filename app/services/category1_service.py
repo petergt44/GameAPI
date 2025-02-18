@@ -1,48 +1,40 @@
-"""
-Service layer for Category 1 game providers.
-"""
+from .base_service import BaseGameService
+import time
 
-import requests
+class Category1Service(BaseGameService):
+    @property
+    def base_url(self):
+        return current_app.config['CATEGORY1_BASE_URL']
 
-class Category1Service:
-    """Base class for Category 1 game providers."""
+    def login(self, username, password):
+        timestamp = str(int(time.time()))
+        payload = {
+            "username": self._encrypt(username, timestamp),
+            "password": self._encrypt(password, timestamp),
+            "auth_code": ""
+        }
+        response = self._make_request("POST", "/api/user/login", json=payload)
+        
+        # Ensure response is a dictionary and JSON-serializable
+        if not isinstance(response, dict):
+            return {"error": "Invalid response from provider"}, 500
 
-    def __init__(self, base_url, username, password):
-        self.base_url = base_url
-        self.username = username
-        self.password = password
-        self.session = requests.Session()
-
-    def login(self):
-        """Login to the game provider."""
-        payload = {"username": self.username, "password": self.password}
-        response = self.session.post(f"{self.base_url}/api/login", data=payload)
-        return response.json()
+        return {
+            "message": "Login successful",
+            "token": response.get('token', ''),
+            "provider": self.provider_name
+        }
 
     def add_user(self, username, password):
-        """Add a new user."""
+        token = self._handle_token_expiration()
         payload = {
-            "username": username,
-            "password": password,
-            "password_confirmation": password,
+            "token": token,
+            "account": username,
+            "pwd": password
         }
-        response = self.session.post(f"{self.base_url}/api/player/playerInsert", data=payload)
-        return response.json()
-
-    def recharge_user(self, user_id, amount):
-        """Recharge a user's balance."""
-        payload = {
-            "id": user_id,
-            "balance": amount,
+        response = self._make_request("POST", "/api/account/savePlayer", json=payload)
+        return {
+            "message": "User created",
+            "user_id": response.get('user_id'),
+            "username": username
         }
-        response = self.session.post(f"{self.base_url}/api/player/agentRecharge", data=payload)
-        return response.json()
-
-    def redeem_user(self, user_id, amount):
-        """Redeem from a user's balance."""
-        payload = {
-            "id": user_id,
-            "balance": amount,
-        }
-        response = self.session.post(f"{self.base_url}/api/player/agentWithdraw", data=payload)
-        return response.json()
