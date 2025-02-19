@@ -7,10 +7,14 @@ from app import db
 from flask_login import UserMixin
 import enum
 
+
 class RemoteProvider(enum.Enum):
     """Enum for third-party game providers."""
     VBLINK = "VBLINK"
     CATEGORY1 = "CATEGORY1"
+    CATEGORY2 = "CATEGORY2"
+    CATEGORY3 = "CATEGORY3"
+    CATEGORY4 = "CATEGORY4"
 
 class AccountType(enum.Enum):
     """Enum for account types (admin, store, player)."""
