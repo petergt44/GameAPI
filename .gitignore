@@ -15,3 +15,6 @@ __pycache__/
 
 # Ignore migrations (if not using Alembic)
 # migrations/
+
+# Ignore configuration file
+config,py
