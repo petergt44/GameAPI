@@ -2,85 +2,80 @@
 Service implementation for Category 2 game providers.
 """
 
-from .base_service import BaseGameService
 import time
+from flask import current_app
+from app.services.base_service import BaseGameService
 
 class Category2Service(BaseGameService):
+    def __init__(self, provider_name="Category2"):
+        super().__init__(provider_name)
+
     @property
     def base_url(self):
-        return current_app.config['CATEGORY2_BASE_URL']
+        providers = current_app.config.get("CATEGORY2_PROVIDERS", [])
+        return providers[0] if providers else ""
 
     def login(self, username, password):
-        timestamp = str(int(time.time()))
         payload = {
-            "agent_name": username,
-            "agent_pwd": password,
-            "agent_code": self._solve_captcha(),
-            "t": timestamp
+            "username": username,
+            "password": password
         }
-        return self._make_request("POST", "/api/agent/agentLogin", json=payload)
+        response = self._make_request("POST", "/login", json=payload)
+        return {
+            "message": "Login successful",
+            "token": response.get('token', 'dummy-token') if response else None,
+            "provider": self.provider_name
+        }
 
-    def _solve_captcha(self):
-        """Solve CAPTCHA using 2Captcha."""
-        captcha_url = f"{self.base_url}/api/agent/captcha?t={int(time.time())}"
-        captcha_response = self.session.get(captcha_url)
-        captcha_base64 = base64.b64encode(captcha_response.content).decode("utf-8")
-        try:
-            solver = TwoCaptcha(os.getenv("CAPTCHA_API_KEY"))
-            result = solver.normal(captcha_base64)
-            return result["code"]
-        except Exception as e:
-            logger.error(f"[{self.provider_name}] Error solving CAPTCHA: {e}")
-            return None
-
-    def add_user(self, username, password):
+    def add_user(self, new_username, new_password):
         payload = {
-            "account": username,
-            "login_pwd": password,
-            "check_pwd": password
+            "admin_token": "dummy-admin-token",
+            "new_account": new_username,
+            "new_password": new_password
         }
-        return self._make_request("POST", "/api/user/addUser", json=payload)
+        response = self._make_request("POST", "/userManagement/insert", json=payload)
+        return {
+            "message": "User created",
+            "user_id": response.get('user_id', 'dummy-user-id') if response else None,
+            "username": new_username
+        }
 
     def recharge(self, username, amount):
-        user_id, _ = self._get_user_id(username)
         payload = {
-            "user_id": user_id,
-            "type": 1,
+            "username": username,
             "amount": amount
         }
-        return self._make_request("POST", "/api/user/rechargeRedeem", json=payload)
+        response = self._make_request("POST", "/rechargeRecord", json=payload)
+        return {
+            "message": "Recharge successful",
+            "amount": amount
+        }
 
     def redeem(self, username, amount):
-        user_id, _ = self._get_user_id(username)
         payload = {
-            "user_id": user_id,
-            "type": 2,
+            "username": username,
             "amount": amount
         }
-        return self._make_request("POST", "/api/user/rechargeRedeem", json=payload)
-
-    def get_balances(self, username):
-        user_id, _ = self._get_user_id(username)
-        user_balance = self._make_request("POST", "/api/user/balance", json={"user_id": user_id})
-        agent_balance = self._make_request("POST", "/api/agent/balance", json={"agent_id": self._get_agent_id()})
+        response = self._make_request("POST", "/redeemRecord", json=payload)
         return {
-            "user_balance": user_balance.get("data", {}).get("t"),
-            "agent_balance": agent_balance.get("data", {}).get("t")
+            "message": "Redeem successful",
+            "amount": amount
         }
 
-    def _get_user_id(self, username):
-        payload = {"type": 1, "search": username}
-        response = self._make_request("POST", "/api/user/userList", json=payload)
-        if response and response.get("msg") == "success":
-            user_list = response.get("data", {}).get("list", [])
-            if user_list:
-                return user_list[0].get("user_id"), "Success"
-        return None, "User not found"
+    def reset_password(self, username, new_password):
+        payload = {
+            "username": username,
+            "new_password": new_password
+        }
+        response = self._make_request("POST", "/userManagement/resetpassword", json=payload)
+        return {
+            "message": "Password reset successful",
+            "username": username
+        }
 
-    def _get_agent_id(self):
-        response = self._make_request("POST", "/api/agent/agentList")
-        if response and response.get("msg") == "success":
-            agent_list = response.get("data", {}).get("list", [])
-            if agent_list:
-                return agent_list[0].get("agent_id")
-        return None
+    def get_balances(self, username):
+        payload = {"username": username}
+        response = self._make_request("POST", "/api/agent/balance", json=payload)
+        return {
+            "balance": response.get('balance', '0.00') if response else None
+        }

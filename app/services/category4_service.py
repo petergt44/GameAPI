@@ -1,47 +1,60 @@
 """
-Service layer for Category 4 game providers.
+Service implementation for Category 4 game providers.
 """
 
-import requests
+from .base_service import BaseGameService
+import hashlib
+import time
 
-class Category4Service:
-    """Base class for Category 4 game providers."""
+class Category4Service(BaseGameService):
+    SECRET_KEY = "#s3LEA3RpR6PNmbWtuBCPn!4gS2DNM44"
 
-    def __init__(self, base_url, username, password):
-        self.base_url = base_url
-        self.username = username
-        self.password = password
-        self.session = requests.Session()
+    @property
+    def base_url(self):
+        return current_app.config['CATEGORY4_BASE_URL']
 
-    def login(self):
-        """Login to the game provider."""
-        payload = {"username": self.username, "password": self.password}
-        response = self.session.post(f"{self.base_url}/api/login", data=payload)
-        return response.json()
+    def login(self, username, password):
+        timestamp = int(time.time())
+        payload = self._finalize_payload({
+            "username": self._encrypt(username, timestamp),
+            "password": self._encrypt(password, timestamp),
+            "auth_code": ""
+        }, timestamp)
+        return self._make_request("POST", "/api/user/login", json=payload)
+
+    def _finalize_payload(self, data, timestamp):
+        """Sign and finalize the payload."""
+        data_string = "".join(str(data[k]) for k in sorted(data) if data[k])
+        sign = hashlib.md5((data_string + str(timestamp) + self.SECRET_KEY).encode("utf-8")).hexdigest()
+        return {"sign": sign, "stime": timestamp, **data}
 
     def add_user(self, username, password):
-        """Add a new user."""
-        payload = {
-            "username": username,
-            "password": password,
-        }
-        response = self.session.post(f"{self.base_url}/api/player/add", data=payload)
-        return response.json()
+        timestamp = int(time.time() * 1000)
+        payload = self._finalize_payload({
+            "token": self._handle_token_expiration(),
+            "account": username,
+            "pwd": password
+        }, timestamp)
+        return self._make_request("POST", "/api/account/savePlayer", json=payload)
 
-    def recharge_user(self, user_id, amount):
-        """Recharge a user's balance."""
-        payload = {
-            "user_id": user_id,
-            "amount": amount,
-        }
-        response = self.session.post(f"{self.base_url}/api/player/recharge", data=payload)
-        return response.json()
+    def recharge(self, username, amount):
+        timestamp = int(time.time() * 1000)
+        payload = self._finalize_payload({
+            "token": self._handle_token_expiration(),
+            "account": username,
+            "score": amount,
+            "user_type": "player"
+        }, timestamp)
+        return self._make_request("POST", "/api/account/enterScore", json=payload)
 
-    def redeem_user(self, user_id, amount):
-        """Redeem from a user's balance."""
-        payload = {
-            "user_id": user_id,
-            "amount": amount,
-        }
-        response = self.session.post(f"{self.base_url}/api/player/redeem", data=payload)
-        return response.json()
+    def redeem(self, username, amount):
+        return self.recharge(username, -amount)
+
+    def get_balances(self, username):
+        timestamp = int(time.time() * 1000)
+        payload = self._finalize_payload({
+            "token": self._handle_token_expiration(),
+            "account": username,
+            "type": 2
+        }, timestamp)
+        return self._make_request("POST", "/api/search/Account", json=payload)
