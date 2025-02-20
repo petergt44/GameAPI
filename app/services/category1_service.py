@@ -1,10 +1,11 @@
 """
-Service implementation for Category 1 game providers.
+Service class for Category 1 game providers (e.g., Gameroom).
+Handles token-based authentication and operations.
 """
 
 import time
 from flask import current_app
-from app.services.base_service import BaseGameService
+from .base_service import BaseGameService
 
 class Category1Service(BaseGameService):
     def __init__(self, provider_name="Category1"):

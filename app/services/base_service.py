@@ -18,83 +18,45 @@ logger = logging.getLogger("automater")
 cache = Cache()
 
 class BaseGameService(ABC):
-    provider_name = 'BaseProvider'
+    """Base class for game provider services."""
 
-    def __init__(self, provider_name=None):
-        if provider_name:
-            self.provider_name = provider_name
+    DEFAULT_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.5",
+        "X-Requested-With": "XMLHttpRequest",
+    }
+    
+    def __init__(self, provider):
+        """Initialize with a provider object."""
+        self.provider = provider
+        self.base_url = provider.url
         self.session = requests.Session()
-        self.base_headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        }
+        self.session.headers.update(self.DEFAULT_HEADERS)
+        self._load_cached_data()
+        self.logger = logger
 
-    @property
-    @abstractmethod
-    def base_url(self):
-        """Base URL for the provider's API."""
-        raise NotImplementedError("Subclasses must define a base_url property.")
+    def _load_cached_data(self):
+        """Load cached headers and cookies."""
+        cached_headers = cache.get(f"{self.provider.name}_headers")
+        if cached_headers:
+            self.session.headers.update(cached_headers)
+        cached_cookies = cache.get(f"{self.provider.name}_cookies")
+        if cached_cookies:
+            for k, v in cached_cookies.items():
+                self.session.cookies.set(k, v)
 
-    @abstractmethod
-    def login(self, username, password):
-        """Authenticate with the provider."""
-        pass
-
-    @abstractmethod
-    def add_user(self, username, password):
-        """Add a new user."""
-        pass
-
-    @abstractmethod
-    def recharge(self, username, amount):
-        """Recharge a user's balance."""
-        pass
-
-    @abstractmethod
-    def redeem(self, username, amount):
-        """Redeem from a user's balance."""
-        pass
-
-    @abstractmethod
-    def get_balances(self, username):
-        """Get user and agent balances."""
-        pass
-
-    def _cache_key(self, suffix):
-        """Generate a cache key for the provider."""
-        return f"{self.provider_name}_{suffix}"
-
-    def _handle_token_expiration(self):
-        """Handle token expiration and refresh."""
-        cached_token = cache.get(self._cache_key("token"))
-        if cached_token and self._validate_token(cached_token):
-            return cached_token
-        new_token = self._refresh_token()
-        cache.set(self._cache_key("token"), new_token, timeout=3600)
-        return new_token
+    def _save_cached_data(self):
+        """Save headers and cookies to cache."""
+        cache.set(f"{self.provider.name}_headers", dict(self.session.headers), timeout=None)
+        cache.set(f"{self.provider.name}_cookies", requests.utils.dict_from_cookiejar(self.session.cookies), timeout=None)
 
     def _make_request(self, method, endpoint, **kwargs):
-        try:
-            url = f"{self.base_url}{endpoint}"
-            response = self.session.request(method, url, headers=self.base_headers, **kwargs)
-            response.raise_for_status()
-            try:
-                data = response.json()
-                # Log the type for debugging
-                import logging
-                logging.getLogger("automater").debug(f"Response data type: {type(data)}")
-                # Ensure data is a dict
-                if not isinstance(data, dict):
-                    return {"raw": str(data)}
-                return data
-            except Exception:
-                return {"raw": response.text}
-        except requests.RequestException as e:
-            import logging
-            logging.getLogger("automater").error(f"{self.provider_name} API error: {str(e)}")
-            return {"error": str(e)}
+        """Make a request with retry on authentication failure."""
+        url = f"{self.base_url}{endpoint}"
+        response = self.session.request(method, url, **kwargs)
+        return response
 
-    def _encrypt(self, data, timestamp):
-        """Encrypt data using AES."""
-        key = f"123{timestamp}abc".encode()
-        cipher = AES.new(key, AES.MODE_ECB)
-        return base64.b64encode(cipher.encrypt(pad(data.encode(), AES.block_size))).decode()
+    def login(self):
+        """Abstract login method to be implemented by subclasses."""
+        raise NotImplementedError("Subclasses must implement login method")
+        
