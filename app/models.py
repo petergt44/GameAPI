@@ -97,3 +97,26 @@ class APILog(db.Model):
             "description": self.description,
             "created_at": self.created_at.isoformat(),
         }
+
+class Provider(db.Model):
+    """Model for game providers."""
+    __tablename__ = 'providers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    category = db.Column(db.Enum(RemoteProvider), nullable=False)
+    url = db.Column(db.String(200), nullable=False)
+    username = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+
+    def to_dict(self):
+        """Convert the provider object to a dictionary."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "category": self.category.name,
+            "url": self.url,
+            "username": self.username,
+            "created_at": self.created_at.isoformat(),
+        }
