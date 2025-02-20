@@ -20,14 +20,14 @@ cache = Cache()
 class BaseGameService(ABC):
     provider_name = 'BaseProvider'
 
-    def __init__(self, provider_name):
+    def __init__(self, provider_name=None):
         if provider_name:
             self.provider_name = provider_name
         self.session = requests.Session()
         self.base_headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
         }
-        
+
     @property
     @abstractmethod
     def base_url(self):
@@ -73,23 +73,25 @@ class BaseGameService(ABC):
         return new_token
 
     def _make_request(self, method, endpoint, **kwargs):
-        """Make an API request with error handling.
-           Always returns a dictionary (or None) so that the calling service
-           does not returns a raw requests.Response object.
-        """
         try:
             url = f"{self.base_url}{endpoint}"
             response = self.session.request(method, url, headers=self.base_headers, **kwargs)
             response.raise_for_status()
             try:
-                # Try to return JSON if possible
-                return response.json()
+                data = response.json()
+                # Log the type for debugging
+                import logging
+                logging.getLogger("automater").debug(f"Response data type: {type(data)}")
+                # Ensure data is a dict
+                if not isinstance(data, dict):
+                    return {"raw": str(data)}
+                return data
             except Exception:
-                # Otherwise, return a dict with the raw text
                 return {"raw": response.text}
         except requests.RequestException as e:
-            logger.error(f"{self.provider_name} API error: {str(e)}")
-            return None
+            import logging
+            logging.getLogger("automater").error(f"{self.provider_name} API error: {str(e)}")
+            return {"error": str(e)}
 
     def _encrypt(self, data, timestamp):
         """Encrypt data using AES."""

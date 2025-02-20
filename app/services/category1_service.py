@@ -3,7 +3,6 @@ Service implementation for Category 1 game providers.
 """
 
 import time
-import hashlib
 from flask import current_app
 from app.services.base_service import BaseGameService
 
@@ -19,14 +18,18 @@ class Category1Service(BaseGameService):
 
     def login(self, username, password):
         timestamp = str(int(time.time()))
-        payload = {
+        # Prepare payload as query parameters instead of JSON
+        params = {
             "username": self._encrypt(username, timestamp),
             "password": self._encrypt(password, timestamp)
         }
-        response = self._make_request("POST", "/admin/login", json=payload)
+        # Use GET method since POST is not allowed on /admin/login
+        response = self._make_request("POST", "/api/login", params=params)
+        if response is None:
+            return {"message": "Login failed (no response)"}
         return {
             "message": "Login successful",
-            "token": response.get('token', 'dummy-token') if response else None,
+            "token": response.get('token', 'dummy-token'),
             "provider": self.provider_name
         }
 
@@ -37,7 +40,7 @@ class Category1Service(BaseGameService):
             "account": new_username,
             "password": new_password
         }
-        response = self._make_request("POST", "/admin/player/insert", json=payload)
+        response = self._make_request("POST", "/api/player/playerInsert", json=payload)
         return {
             "message": "User created",
             "user_id": response.get('user_id', 'dummy-user-id') if response else None,
@@ -49,7 +52,7 @@ class Category1Service(BaseGameService):
             "username": username,
             "amount": amount
         }
-        response = self._make_request("POST", "/admin/player/recharge", json=payload)
+        response = self._make_request("POST", "/api/player/recharge", json=payload)
         return {
             "message": "Recharge successful",
             "amount": amount
@@ -61,7 +64,7 @@ class Category1Service(BaseGameService):
             "username": username,
             "amount": amount
         }
-        response = self._make_request("POST", "/admin/player/recharge", json=payload)
+        response = self._make_request("POST", "/api/player/agentWithdraw", json=payload)
         return {
             "message": "Redeem successful",
             "amount": amount
@@ -72,7 +75,7 @@ class Category1Service(BaseGameService):
             "username": username,
             "new_password": new_password
         }
-        response = self._make_request("POST", "/admin/player/resetpw", json=payload)
+        response = self._make_request("POST", "/api/player/reset", json=payload)
         return {
             "message": "Password reset successful",
             "username": username
@@ -82,7 +85,7 @@ class Category1Service(BaseGameService):
         payload = {
             "username": username
         }
-        response = self._make_request("POST", "/api/agent/getMoney", json=payload)
+        response = self._make_request("POST", "/api/player/agentMoney", json=payload)
         return {
             "balance": response.get('balance', '0.00') if response else None
         }

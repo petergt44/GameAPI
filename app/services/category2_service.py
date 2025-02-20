@@ -20,7 +20,7 @@ class Category2Service(BaseGameService):
             "username": username,
             "password": password
         }
-        response = self._make_request("POST", "/login", json=payload)
+        response = self._make_request("POST", "/api/agent/agentLogin", json=payload)
         return {
             "message": "Login successful",
             "token": response.get('token', 'dummy-token') if response else None,
@@ -33,7 +33,7 @@ class Category2Service(BaseGameService):
             "new_account": new_username,
             "new_password": new_password
         }
-        response = self._make_request("POST", "/userManagement/insert", json=payload)
+        response = self._make_request("POST", "/api/user/addUser", json=payload)
         return {
             "message": "User created",
             "user_id": response.get('user_id', 'dummy-user-id') if response else None,
@@ -45,7 +45,7 @@ class Category2Service(BaseGameService):
             "username": username,
             "amount": amount
         }
-        response = self._make_request("POST", "/rechargeRecord", json=payload)
+        response = self._make_request("POST", "/api/user/Recharge", json=payload)
         return {
             "message": "Recharge successful",
             "amount": amount
@@ -56,7 +56,7 @@ class Category2Service(BaseGameService):
             "username": username,
             "amount": amount
         }
-        response = self._make_request("POST", "/redeemRecord", json=payload)
+        response = self._make_request("POST", "/api/user/Redeem", json=payload)
         return {
             "message": "Redeem successful",
             "amount": amount
@@ -67,7 +67,7 @@ class Category2Service(BaseGameService):
             "username": username,
             "new_password": new_password
         }
-        response = self._make_request("POST", "/userManagement/resetpassword", json=payload)
+        response = self._make_request("POST", "/api/user/resetUserPwd", json=payload)
         return {
             "message": "Password reset successful",
             "username": username
@@ -75,7 +75,7 @@ class Category2Service(BaseGameService):
 
     def get_balances(self, username):
         payload = {"username": username}
-        response = self._make_request("POST", "/api/agent/balance", json=payload)
+        response = self._make_request("POST", "/api/user/balance", json=payload)
         return {
             "balance": response.get('balance', '0.00') if response else None
         }

@@ -80,7 +80,7 @@ class Category3Service(BaseGameService):
         }
         response = self._make_request(
             "POST",
-            "/Module/AccountManager/ResetPassWord.aspx?param=6507DC5C59255DD1A5C7545D2385B859B00E7E53F8C9C3F5EDE51E1DD94B250B",
+            "/Module/AccountManager/ResetPassWord.aspx?",
             json=payload
         )
         return {
@@ -91,7 +91,7 @@ class Category3Service(BaseGameService):
     def get_balances(self, username):
         response = self._make_request(
             "GET",
-            "/Module/AccountManager/AccountsHistoryPerson.aspx?param=4641718"
+            "/Module/AccountManager/AccountsHistoryPerson.aspx?"
         )
         # Assume response is a dict with key "html" containing balance info
         html_content = response.get("html", "") if response else ""
