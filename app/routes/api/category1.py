@@ -52,6 +52,9 @@ response_model = category1_ns.model('Response', {
     'balance': fields.String(description='Balance', required=False)
 })
 
+# app/routes/api/category1.py (excerpt)
+from flask import current_app
+
 @category1_ns.route('/login')
 class Category1Login(Resource):
     @category1_ns.expect(login_request)
@@ -59,9 +62,17 @@ class Category1Login(Resource):
     def post(self):
         """Authenticate with a Category 1 provider."""
         data = category1_ns.payload
+        if data is None:
+            return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
+        current_app.logger.info(f"Received request data: {data}")
         provider = Provider.query.get(data['provider_id'])
-        if not provider or provider.category != 'CATEGORY1':
+        if not provider:
+            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
             return {"message": "Invalid provider for Category 1"}, 400
+        if provider.category != 'CATEGORY1':
+            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
+            return {"message": "Invalid provider for Category 1"}, 400
+        current_app.logger.info(f"Using provider: {provider.to_dict()}")
         service = Category1Service(provider)
         result = service.login(data['username'], data['password'])
         status_code = 200 if "Login successful" in result["message"] else 400
