@@ -3,7 +3,6 @@ Service class for Category 3 game providers (e.g., Fire Kirin).
 Handles web page interactions and form submissions.
 """
 
-# app/services/category3_service.py
 import time
 from bs4 import BeautifulSoup
 import re
@@ -23,6 +22,7 @@ class Category3Service(BaseGameService):
         soup = BeautifulSoup(response.text, 'html.parser')
         viewstate = soup.find('input', {'name': '__VIEWSTATE'})['value'] if soup.find('input', {'name': '__VIEWSTATE'}) else None
         eventvalidation = soup.find('input', {'name': '__EVENTVALIDATION'})['value'] if soup.find('input', {'name': '__EVENTVALIDATION'}) else None
+        self.logger.debug(f"Extracted fields - VIEWSTATE: {viewstate}, EVENTVALIDATION: {eventvalidation}")
         return viewstate, eventvalidation
 
     def _extract_dynamic_url(self, response, action):
@@ -47,10 +47,13 @@ class Category3Service(BaseGameService):
         """Log in by submitting the login form."""
         for attempt in range(max_retries):
             try:
+                # Initial GET to fetch login page
                 response = self._make_request("GET", "/default.aspx")
+                self.logger.debug(f"[{self.provider.name}] Login page response: {response.text[:500]}")  # Log first 500 chars
                 viewstate, eventvalidation = self._extract_hidden_fields(response)
                 if not viewstate or not eventvalidation:
-                    self.logger.error(f"[{self.provider.name}] Missing hidden fields")
+                    self.logger.error(f"[{self.provider.name}] Missing hidden fields, retrying...")
+                    time.sleep(retry_delay)
                     continue
                 payload = {
                     "__VIEWSTATE": viewstate,
@@ -60,11 +63,15 @@ class Category3Service(BaseGameService):
                     "txtVerifyCode": "solved-captcha",  # Replace with actual CAPTCHA logic if needed
                     "btnLogin": "Login in",
                 }
+                self.logger.info(f"[{self.provider.name}] Sending login payload: {payload}")
                 response = self._make_request("POST", "/default.aspx", data=payload)
+                self.logger.debug(f"[{self.provider.name}] Login response: {response.text[:500]}")
                 if "Welcome" in response.text:
                     self._save_cached_data()
                     self.logger.info(f"[{self.provider.name}] Login successful")
                     return {"message": "Login successful"}
+                else:
+                    self.logger.warning(f"[{self.provider.name}] Login failed, no 'Welcome' in response")
             except Exception as e:
                 self.logger.error(f"[{self.provider.name}] Login error: {e}")
             time.sleep(retry_delay)

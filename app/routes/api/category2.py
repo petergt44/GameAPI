@@ -1,16 +1,14 @@
 """
 API routes for Category 2 game providers (e.g., Game Vault).
 """
-
+# app/routes/api/category2.py
 from flask_restx import Namespace, Resource, fields
 from app.services.category2_service import Category2Service
 from app.models import Provider
 from flask import current_app
 
-
 category2_ns = Namespace('category2', description='Category 2 game provider operations')
 
-# Request models
 login_request = category2_ns.model('Category2Login', {
     'provider_id': fields.Integer(required=True, description='Provider ID'),
     'username': fields.String(required=True, description='Provider username'),
@@ -44,7 +42,6 @@ agent_balance_request = category2_ns.model('Category2AgentBalance', {
     'provider_id': fields.Integer(required=True, description='Provider ID')
 })
 
-# Response model
 response_model = category2_ns.model('Response', {
     'message': fields.String(description='Operation status message'),
     'error': fields.String(description='Error message if applicable', required=False),
@@ -67,7 +64,6 @@ class Category2Login(Resource):
         if not provider:
             current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
             return {"message": "Invalid provider for Category 2"}, 400
-        # Use .name to get the string value of the Enum
         if provider.category.name != 'CATEGORY2':
             current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
@@ -84,8 +80,14 @@ class Category2AddUser(Resource):
     def post(self):
         """Add a new user to a Category 2 provider."""
         data = category2_ns.payload
+        if data is None:
+            return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider or provider.category != 'CATEGORY2':
+        if not provider:
+            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
+            return {"message": "Invalid provider for Category 2"}, 400
+        if provider.category.name != 'CATEGORY2':
+            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
         result = service.add_user(data['new_username'], data['new_password'])
@@ -99,8 +101,14 @@ class Category2Recharge(Resource):
     def post(self):
         """Recharge a user's account in a Category 2 provider."""
         data = category2_ns.payload
+        if data is None:
+            return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider or provider.category != 'CATEGORY2':
+        if not provider:
+            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
+            return {"message": "Invalid provider for Category 2"}, 400
+        if provider.category.name != 'CATEGORY2':
+            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
         result = service.recharge(data['username'], data['amount'])
@@ -114,8 +122,14 @@ class Category2Redeem(Resource):
     def post(self):
         """Redeem funds from a user's account in a Category 2 provider."""
         data = category2_ns.payload
+        if data is None:
+            return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider or provider.category != 'CATEGORY2':
+        if not provider:
+            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
+            return {"message": "Invalid provider for Category 2"}, 400
+        if provider.category.name != 'CATEGORY2':
+            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
         result = service.redeem(data['username'], data['amount'])
@@ -129,8 +143,14 @@ class Category2ResetPassword(Resource):
     def post(self):
         """Reset a user's password in a Category 2 provider."""
         data = category2_ns.payload
+        if data is None:
+            return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider or provider.category != 'CATEGORY2':
+        if not provider:
+            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
+            return {"message": "Invalid provider for Category 2"}, 400
+        if provider.category.name != 'CATEGORY2':
+            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
         result = service.change_password(data['username'], data['new_password'])
@@ -144,8 +164,14 @@ class Category2Balance(Resource):
     def post(self):
         """Fetch a user's balance from a Category 2 provider."""
         data = category2_ns.payload
+        if data is None:
+            return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider or provider.category != 'CATEGORY2':
+        if not provider:
+            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
+            return {"message": "Invalid provider for Category 2"}, 400
+        if provider.category.name != 'CATEGORY2':
+            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
         result = service.get_balances(data['username'])
@@ -159,8 +185,14 @@ class Category2AgentBalance(Resource):
     def post(self):
         """Fetch the agent's balance from a Category 2 provider."""
         data = category2_ns.payload
+        if data is None:
+            return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider or provider.category != 'CATEGORY2':
+        if not provider:
+            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
+            return {"message": "Invalid provider for Category 2"}, 400
+        if provider.category.name != 'CATEGORY2':
+            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
         result = service.get_agent_balance()
