@@ -5,6 +5,8 @@ API routes for Category 2 game providers (e.g., Game Vault).
 from flask_restx import Namespace, Resource, fields
 from app.services.category2_service import Category2Service
 from app.models import Provider
+from flask import current_app
+
 
 category2_ns = Namespace('category2', description='Category 2 game provider operations')
 
@@ -58,9 +60,18 @@ class Category2Login(Resource):
     def post(self):
         """Authenticate with a Category 2 provider."""
         data = category2_ns.payload
+        if data is None:
+            return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
+        current_app.logger.info(f"Received request data: {data}")
         provider = Provider.query.get(data['provider_id'])
-        if not provider or provider.category != 'CATEGORY2':
+        if not provider:
+            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
             return {"message": "Invalid provider for Category 2"}, 400
+        # Use .name to get the string value of the Enum
+        if provider.category.name != 'CATEGORY2':
+            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
+            return {"message": "Invalid provider for Category 2"}, 400
+        current_app.logger.info(f"Using provider: {provider.to_dict()}")
         service = Category2Service(provider)
         result = service.login(data['username'], data['password'])
         status_code = 200 if "Login successful" in result["message"] else 400
