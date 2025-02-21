@@ -15,6 +15,7 @@ class RemoteProvider(enum.Enum):
     CATEGORY2 = "CATEGORY2"
     CATEGORY3 = "CATEGORY3"
     CATEGORY4 = "CATEGORY4"
+    CATEGORY5 = "CATEGORY5"
 
 class AccountType(enum.Enum):
     """Enum for account types (admin, store, player)."""
