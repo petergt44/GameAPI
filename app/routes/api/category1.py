@@ -5,6 +5,8 @@ API routes for Category 1 game providers (e.g., Gameroom).
 from flask_restx import Namespace, Resource, fields
 from app.services.category1_service import Category1Service
 from app.models import Provider
+from flask import current_app
+
 
 category1_ns = Namespace('category1', description='Category 1 game provider operations')
 
@@ -52,9 +54,6 @@ response_model = category1_ns.model('Response', {
     'balance': fields.String(description='Balance', required=False)
 })
 
-# app/routes/api/category1.py (excerpt)
-from flask import current_app
-
 @category1_ns.route('/login')
 class Category1Login(Resource):
     @category1_ns.expect(login_request)
@@ -69,7 +68,8 @@ class Category1Login(Resource):
         if not provider:
             current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
             return {"message": "Invalid provider for Category 1"}, 400
-        if provider.category != 'CATEGORY1':
+        # Use .name to get the string value of the Enum
+        if provider.category.name != 'CATEGORY1':
             current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 1"}, 400
         current_app.logger.info(f"Using provider: {provider.to_dict()}")

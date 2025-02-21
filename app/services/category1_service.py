@@ -8,85 +8,89 @@ from flask import current_app
 from .base_service import BaseGameService
 
 class Category1Service(BaseGameService):
-    def __init__(self, provider_name="Category1"):
-        super().__init__(provider_name)
+    """Service for Category 1 providers."""
 
-    @property
-    def base_url(self):
-        # Use the first provider URL from configuration for Category1
-        providers = current_app.config.get("CATEGORY1_PROVIDERS", [])
-        return providers[0] if providers else ""
+    def login(self, username, password, max_retries=3, retry_delay=3):
+        """Log in using provider credentials and cache the token."""
+        for attempt in range(max_retries):
+            try:
+                payload = {"username": username, "password": password}
+                response = self._make_request("POST", "/api/login", data=payload)
+                if response.ok:
+                    data = response.json()
+                    if data.get("message") == "Users login succeeded":
+                        token = data.get("token")
+                        self.session.headers["Authorization"] = f"Bearer {token}"
+                        self._save_cached_data()
+                        self.logger.info(f"[{self.provider.name}] Login successful")
+                        return {"message": "Login successful", "token": token}
+                else:
+                    self.logger.warning(f"[{self.provider.name}] Login failed: {response.text}")
+            except Exception as e:
+                self.logger.error(f"[{self.provider.name}] Login error: {e}")
+            time.sleep(retry_delay)
+        self.logger.error(f"[{self.provider.name}] Max login attempts reached")
+        return {"message": "Login failed", "error": "Max attempts reached"}
 
-    def login(self, username, password):
-        timestamp = str(int(time.time()))
-        # Prepare payload as query parameters instead of JSON
-        params = {
-            "username": self._encrypt(username, timestamp),
-            "password": self._encrypt(password, timestamp)
-        }
-        # Use GET method since POST is not allowed on /admin/login
-        response = self._make_request("POST", "/api/login", params=params)
-        if response is None:
-            return {"message": "Login failed (no response)"}
-        return {
-            "message": "Login successful",
-            "token": response.get('token', 'dummy-token'),
-            "provider": self.provider_name
-        }
-
-    def add_user(self, new_username, new_password):
-        # Here we assume that admin credentials are already handled (e.g. via a stored token)
+    def add_user(self, username, password):
+        """Add a new user to the provider."""
         payload = {
-            "admin_token": "dummy-admin-token",  # Replace with a valid admin token in production
-            "account": new_username,
-            "password": new_password
+            "username": username,
+            "password": password,
+            "password_confirmation": password,
         }
         response = self._make_request("POST", "/api/player/playerInsert", json=payload)
-        return {
-            "message": "User created",
-            "user_id": response.get('user_id', 'dummy-user-id') if response else None,
-            "username": new_username
-        }
+        if response.ok:
+            data = response.json()
+            if data.get("message") == "Insert successful":
+                return {"message": "User created", "user_id": data.get("user_id"), "username": username}
+            return {"message": "Failed to add user", "error": data.get("message")}
+        return {"message": "Failed to add user", "error": response.text}
 
     def recharge(self, username, amount):
-        payload = {
-            "username": username,
-            "amount": amount
-        }
-        response = self._make_request("POST", "/api/player/recharge", json=payload)
-        return {
-            "message": "Recharge successful",
-            "amount": amount
-        }
+        """Recharge a user's account."""
+        user_id_response = self._search_user(username)
+        if not user_id_response["user_id"]:
+            return {"message": "User not found", "error": user_id_response["error"]}
+        
+        user_id = user_id_response["user_id"]
+        agent_balance_response = self._get_agent_balance()
+        if not agent_balance_response["balance"]:
+            return {"message": "Failed to get agent balance", "error": agent_balance_response["error"]}
 
-    def redeem(self, username, amount):
-        # For Category1, if redeem uses the same endpoint as recharge (adjust if different)
         payload = {
-            "username": username,
-            "amount": amount
+            "id": user_id,
+            "available_balance": agent_balance_response["balance"],
+            "opera_type": 0,
+            "bonus": 0,
+            "balance": amount,
+            "remark": "",
         }
-        response = self._make_request("POST", "/api/player/agentWithdraw", json=payload)
-        return {
-            "message": "Redeem successful",
-            "amount": amount
-        }
+        response = self._make_request("POST", "/api/player/agentRecharge", json=payload)
+        if response.ok:
+            data = response.json()
+            if data.get("message") == "Recharge successful":
+                return {"message": "Recharged successfully"}
+            return {"message": "Failed to recharge", "error": data.get("message")}
+        return {"message": "Failed to recharge", "error": response.text}
 
-    def reset_password(self, username, new_password):
-        payload = {
-            "username": username,
-            "new_password": new_password
-        }
-        response = self._make_request("POST", "/api/player/reset", json=payload)
-        return {
-            "message": "Password reset successful",
-            "username": username
-        }
+    def _search_user(self, username):
+        """Search for a user by username."""
+        params = {"account": username}
+        response = self._make_request("GET", "/api/player/userList", params=params)
+        if response.ok:
+            data = response.json()
+            if data.get("message") == "Query successful" and data["data"]:
+                return {"user_id": data["data"][0]["Id"], "error": None}
+            return {"user_id": None, "error": "User not found"}
+        return {"user_id": None, "error": "Server unreachable"}
 
-    def get_balances(self, username):
-        payload = {
-            "username": username
-        }
-        response = self._make_request("POST", "/api/player/agentMoney", json=payload)
-        return {
-            "balance": response.get('balance', '0.00') if response else None
-        }
+    def _get_agent_balance(self):
+        """Get the agent's balance."""
+        response = self._make_request("POST", "/api/agent/getMoney")
+        if response.ok:
+            data = response.json()
+            if data.get("message") == "Query successful":
+                return {"balance": data["data"], "error": None}
+            return {"balance": None, "error": data.get("message")}
+        return {"balance": None, "error": "Server unreachable"}
