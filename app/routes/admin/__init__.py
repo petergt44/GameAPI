@@ -7,6 +7,9 @@ from .auth import bp as auth_bp
 from .accounts import bp as accounts_bp
 from .tokens import bp as tokens_bp
 from .logs import bp as logs_bp
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
+
 
 # Create a Blueprint for the admin dashboard
 admin_bp = Blueprint('admin', __name__)
@@ -14,7 +17,10 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/admin')
 def admin_dashboard():
     """Render the admin dashboard."""
-    return render_template('admin/dashboard.html')  # You'll need to create this template
+    admin = Admin(app, name='Admin Dashboard', template_mode='bootstrap3')
+    # Example: admin.add_view(ModelView(Store, db.session))
+
+    return admin
 
 # Register all admin routes
 admin_bp.register_blueprint(auth_bp, url_prefix='/admin/api')
