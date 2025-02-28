@@ -2,9 +2,10 @@
 Routes for managing API tokens.
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, render_template, redirect, url_for
 from app.models import Token
 from app import db
+from flask_login import login_required
 
 bp = Blueprint('tokens', __name__)
 
@@ -26,3 +27,17 @@ def create_token():
     db.session.add(token)
     db.session.commit()
     return jsonify(token.to_dict()), 201
+
+@bp.route('/tokens', methods=['GET', 'POST'])
+@login_required
+def manage_tokens():
+    if request.method == 'POST':
+        account_id = request.form['account_id']
+        token = request.form['token']
+        valid_until = request.form['valid_until']
+        token = Token(account_id=account_id, token=token, valid_until=valid_until)
+        db.session.add(token)
+        db.session.commit()
+        return redirect(url_for('tokens.manage_tokens'))
+    tokens = Token.query.all()
+    return render_template('admin/tokens.html', tokens=tokens)
