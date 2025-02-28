@@ -1,7 +1,7 @@
 """
 API routes for Category 2 game providers (e.g., Game Vault).
 """
-# app/routes/api/category2.py
+
 from flask_restx import Namespace, Resource, fields
 from app.services.category2_service import Category2Service
 from app.models import Provider

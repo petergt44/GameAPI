@@ -17,17 +17,23 @@ class Category2Service(BaseGameService):
         return random.randint(10000000, 99999999)
 
     def solve_captcha(self):
-        """Solve CAPTCHA using 2Captcha API."""
         t_value = self._generate_t_value()
         captcha_url = f"{self.base_url}/api/agent/captcha?t={t_value}"
+        self.logger.info(f"[{self.provider.name}] Fetching CAPTCHA from: {captcha_url}")
         try:
-            solver = TwoCaptcha(current_app.config.get('CAPTCHA_API_KEY', 'your_2captcha_api_key'))
+            from flask import current_app  # Import is here to ensure app context
+            api_key = current_app.config.get('CAPTCHA_API_KEY')
+            if not api_key or api_key == "your_actual_2captcha_api_key":
+                raise ValueError("CAPTCHA_API_KEY not set in config")
+            solver = TwoCaptcha(api_key)
             result = solver.normal(captcha_url)
+            self.logger.info(f"[{self.provider.name}] CAPTCHA solved: {result['code']}")
             return result['code'], t_value
         except Exception as e:
             self.logger.error(f"[{self.provider.name}] CAPTCHA solving failed: {e}")
-            return None, t_value
+            return None, t_value # Return tuple to avoid unpacking error
 
+    @BaseGameService.retry_on_failure()
     def login(self, username, password, max_retries=3, retry_delay=3):
         """Log in using provider credentials and CAPTCHA."""
         for attempt in range(max_retries):
@@ -56,6 +62,7 @@ class Category2Service(BaseGameService):
         self.logger.error(f"[{self.provider.name}] Max login attempts reached")
         return {"message": "Login failed", "error": "Max attempts reached"}
 
+    @BaseGameService.retry_on_failure()
     def add_user(self, username, password):
         """Add a new user to the provider."""
         payload = {
@@ -72,6 +79,7 @@ class Category2Service(BaseGameService):
             return {"message": "Failed to add user", "error": data.get("msg")}
         return {"message": "Failed to add user", "error": response.text}
 
+    @BaseGameService.retry_on_failure()
     def recharge(self, username, amount):
         """Recharge a user's account."""
         user_id_response = self._search_user(username)
@@ -87,6 +95,7 @@ class Category2Service(BaseGameService):
             return {"message": "Failed to recharge", "error": data.get("msg")}
         return {"message": "Failed to recharge", "error": response.text}
 
+    @BaseGameService.retry_on_failure()
     def redeem(self, username, amount):
         """Redeem funds from a user's account."""
         user_id_response = self._search_user(username)
@@ -102,6 +111,7 @@ class Category2Service(BaseGameService):
             return {"message": "Failed to redeem", "error": data.get("msg")}
         return {"message": "Failed to redeem", "error": response.text}
 
+    @BaseGameService.retry_on_failure()
     def change_password(self, username, new_password):
         """Change a user's password."""
         user_id_response = self._search_user(username)
@@ -117,6 +127,7 @@ class Category2Service(BaseGameService):
             return {"message": "Failed to change password", "error": data.get("msg")}
         return {"message": "Failed to change password", "error": response.text}
 
+    @BaseGameService.retry_on_failure()
     def get_balances(self, username):
         """Fetch user balance."""
         user_id_response = self._search_user(username)
@@ -132,6 +143,7 @@ class Category2Service(BaseGameService):
             return {"message": "Failed to fetch balance", "error": data.get("msg")}
         return {"message": "Failed to fetch balance", "error": response.text}
 
+    @BaseGameService.retry_on_failure()
     def get_agent_balance(self):
         """Fetch agent's balance."""
         agent_id = self._get_agent_id()
@@ -147,6 +159,7 @@ class Category2Service(BaseGameService):
             return {"message": "Failed to fetch agent balance", "error": data.get("msg")}
         return {"message": "Failed to fetch agent balance", "error": response.text}
 
+    @BaseGameService.retry_on_failure()
     def _search_user(self, username):
         """Search for a user by username."""
         payload = {"type": 1, "search": username}
