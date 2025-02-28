@@ -1,14 +1,17 @@
 """
 API routes for Category 2 game providers (e.g., Game Vault).
+Handles operations with threading for async processing.
 """
 
 from flask_restx import Namespace, Resource, fields
 from app.services.category2_service import Category2Service
+from threading import Thread
 from app.models import Provider
 from flask import current_app
 
 category2_ns = Namespace('category2', description='Category 2 game provider operations')
 
+# Request models
 login_request = category2_ns.model('Category2Login', {
     'provider_id': fields.Integer(required=True, description='Provider ID'),
     'username': fields.String(required=True, description='Provider username'),
@@ -69,9 +72,17 @@ class Category2Login(Resource):
             return {"message": "Invalid provider for Category 2"}, 400
         current_app.logger.info(f"Using provider: {provider.to_dict()}")
         service = Category2Service(provider)
-        result = service.login(data['username'], data['password'])
-        status_code = 200 if "Login successful" in result["message"] else 400
-        return result, status_code
+        result = [None]
+        def run_login():
+            result[0] = service.login(data['username'], data['password'])
+        thread = Thread(target=run_login)
+        thread.start()
+        thread.join()
+        if result[0] is None:
+            current_app.logger.error("Login operation timed out or failed")
+            return {"message": "Login failed", "error": "Operation timed out or failed"}, 500
+        status_code = 200 if "Login successful" in result[0]["message"] else 400
+        return result[0], status_code
 
 @category2_ns.route('/add_user')
 class Category2AddUser(Resource):
@@ -90,9 +101,17 @@ class Category2AddUser(Resource):
             current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
-        result = service.add_user(data['new_username'], data['new_password'])
-        status_code = 201 if "User created" in result["message"] else 400
-        return result, status_code
+        result = [None]
+        def run_add_user():
+            result[0] = service.add_user(data['new_username'], data['new_password'])
+        thread = Thread(target=run_add_user)
+        thread.start()
+        thread.join()
+        if result[0] is None:
+            current_app.logger.error("Add user operation timed out or failed")
+            return {"message": "User creation failed", "error": "Operation timed out or failed"}, 500
+        status_code = 201 if "User created" in result[0]["message"] else 400
+        return result[0], status_code
 
 @category2_ns.route('/recharge')
 class Category2Recharge(Resource):
@@ -111,9 +130,17 @@ class Category2Recharge(Resource):
             current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
-        result = service.recharge(data['username'], data['amount'])
-        status_code = 200 if "Recharged successfully" in result["message"] else 400
-        return result, status_code
+        result = [None]
+        def run_recharge():
+            result[0] = service.recharge(data['username'], data['amount'])
+        thread = Thread(target=run_recharge)
+        thread.start()
+        thread.join()
+        if result[0] is None:
+            current_app.logger.error("Recharge operation timed out or failed")
+            return {"message": "Recharge failed", "error": "Operation timed out or failed"}, 500
+        status_code = 200 if "Recharged successfully" in result[0]["message"] else 400
+        return result[0], status_code
 
 @category2_ns.route('/redeem')
 class Category2Redeem(Resource):
@@ -132,9 +159,17 @@ class Category2Redeem(Resource):
             current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
-        result = service.redeem(data['username'], data['amount'])
-        status_code = 200 if "Redeemed successfully" in result["message"] else 400
-        return result, status_code
+        result = [None]
+        def run_redeem():
+            result[0] = service.redeem(data['username'], data['amount'])
+        thread = Thread(target=run_redeem)
+        thread.start()
+        thread.join()
+        if result[0] is None:
+            current_app.logger.error("Redeem operation timed out or failed")
+            return {"message": "Redeem failed", "error": "Operation timed out or failed"}, 500
+        status_code = 200 if "Redeemed successfully" in result[0]["message"] else 400
+        return result[0], status_code
 
 @category2_ns.route('/reset_password')
 class Category2ResetPassword(Resource):
@@ -153,9 +188,17 @@ class Category2ResetPassword(Resource):
             current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
-        result = service.change_password(data['username'], data['new_password'])
-        status_code = 200 if "Password changed successfully" in result["message"] else 400
-        return result, status_code
+        result = [None]
+        def run_reset_password():
+            result[0] = service.change_password(data['username'], data['new_password'])
+        thread = Thread(target=run_reset_password)
+        thread.start()
+        thread.join()
+        if result[0] is None:
+            current_app.logger.error("Reset password operation timed out or failed")
+            return {"message": "Password reset failed", "error": "Operation timed out or failed"}, 500
+        status_code = 200 if "Password changed successfully" in result[0]["message"] else 400
+        return result[0], status_code
 
 @category2_ns.route('/balance')
 class Category2Balance(Resource):
@@ -174,9 +217,17 @@ class Category2Balance(Resource):
             current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
-        result = service.get_balances(data['username'])
-        status_code = 200 if "Balance fetched" in result["message"] else 400
-        return result, status_code
+        result = [None]
+        def run_get_balances():
+            result[0] = service.get_balances(data['username'])
+        thread = Thread(target=run_get_balances)
+        thread.start()
+        thread.join()
+        if result[0] is None:
+            current_app.logger.error("Balance fetch operation timed out or failed")
+            return {"message": "Balance fetch failed", "error": "Operation timed out or failed"}, 500
+        status_code = 200 if "Balance fetched" in result[0]["message"] else 400
+        return result[0], status_code
 
 @category2_ns.route('/agent_balance')
 class Category2AgentBalance(Resource):
@@ -195,6 +246,14 @@ class Category2AgentBalance(Resource):
             current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
             return {"message": "Invalid provider for Category 2"}, 400
         service = Category2Service(provider)
-        result = service.get_agent_balance()
-        status_code = 200 if "Agent balance fetched" in result["message"] else 400
-        return result, status_code
+        result = [None]
+        def run_get_agent_balance():
+            result[0] = service.get_agent_balance()
+        thread = Thread(target=run_get_agent_balance)
+        thread.start()
+        thread.join()
+        if result[0] is None:
+            current_app.logger.error("Agent balance fetch operation timed out or failed")
+            return {"message": "Agent balance fetch failed", "error": "Operation timed out or failed"}, 500
+        status_code = 200 if "Agent balance fetched" in result[0]["message"] else 400
+        return result[0], status_code
