@@ -25,6 +25,8 @@ class Category1Service(BaseGameService):
     def _save_cached_token(self, token):
         current_app.config[f"TOKEN_{self.provider.id}"] = token
 
+    
+    @BaseGameService.retry_on_failure()
     def login(self, username, password, max_retries=3, retry_delay=3):
         for attempt in range(max_retries):
             try:
@@ -47,12 +49,14 @@ class Category1Service(BaseGameService):
         self.logger.error(f"[{self.provider.name}] Max login attempts reached")
         return {"message": "Login failed", "error": "Max attempts reached"}
 
+    @BaseGameService.retry_on_failure()
     def get_balances(self, username, max_retries=3, retry_delay=2):
         user_response = self._search_user(username, max_retries, retry_delay)
         if not user_response["user_id"]:
             return {"message": "User not found", "error": user_response["error"]}
         return {"message": "Balance fetched", "balance": str(user_response["balance"])}
 
+    @BaseGameService.retry_on_failure()
     def add_user(self, username, password, max_retries=3, retry_delay=2):
         payload = {
             "username": username,
@@ -73,6 +77,7 @@ class Category1Service(BaseGameService):
                 time.sleep(retry_delay)
         return {"message": "Failed to add user", "error": "Max retries reached"}
 
+    @BaseGameService.retry_on_failure()
     def _search_user(self, username, max_retries=3, retry_delay=2):
         for attempt in range(max_retries):
             try:
@@ -90,6 +95,7 @@ class Category1Service(BaseGameService):
                 time.sleep(retry_delay)
         return {"user_id": None, "balance": None, "error": "Max retries reached"}
 
+    @BaseGameService.retry_on_failure()
     def get_agent_balance(self, max_retries=3, retry_delay=2):
         for attempt in range(max_retries):
             try:
@@ -118,6 +124,7 @@ class Category1Service(BaseGameService):
                 time.sleep(retry_delay)
         return {"message": "Failed to fetch agent balance", "error": "Max retries reached"}
 
+    @BaseGameService.retry_on_failure()
     def recharge(self, username, amount, max_retries=3, retry_delay=2):
         user_response = self._search_user(username)
         if not user_response["user_id"]:
@@ -150,6 +157,7 @@ class Category1Service(BaseGameService):
                 time.sleep(retry_delay)
         return {"message": "Failed to recharge", "error": "Max retries reached"}
 
+    @BaseGameService.retry_on_failure()
     def redeem(self, username, amount, max_retries=3, retry_delay=2):
         user_response = self._search_user(username)
         if not user_response["user_id"]:
@@ -181,6 +189,7 @@ class Category1Service(BaseGameService):
                 time.sleep(retry_delay)
         return {"message": "Failed to redeem", "error": "Max retries reached"}
 
+    @BaseGameService.retry_on_failure()
     def change_password(self, username, new_password, max_retries=3, retry_delay=2):
         user_response = self._search_user(username)
         if not user_response["user_id"]:
