@@ -61,7 +61,7 @@ def manage_provider(provider_id):
 
             app.logger.info(f"Action: {action}, Payload: {payload}")
             url = f"http://127.0.0.1:8080/{category}/{action}"
-            response = requests.post(url, json=payload, timeout=10)
+            response = requests.post(url, json=payload, timeout=30)
             response.raise_for_status()
             result = response.json()
         except KeyError as e:
