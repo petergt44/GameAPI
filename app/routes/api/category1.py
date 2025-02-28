@@ -1,8 +1,9 @@
+
 """
-API routes for Category 1 game providers (e.g., Gameroom).
+Service class for Category 1 game providers (e.g., Gameroom).
+Handles token-based authentication and operations.
 """
 
-# app/routes/api/category1.py
 from flask_restx import Namespace, Resource, fields
 from app.services.category1_service import Category1Service
 from app.models import Provider
@@ -64,11 +65,8 @@ class Category1Login(Resource):
             return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         current_app.logger.info(f"Received request data: {data}")
         provider = Provider.query.get(data['provider_id'])
-        if not provider:
-            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
-            return {"message": "Invalid provider for Category 1"}, 400
-        if provider.category.name != 'CATEGORY1':
-            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
+        if not provider or provider.category.name != 'CATEGORY1':
+            current_app.logger.error(f"Invalid provider for ID: {data.get('provider_id')}")
             return {"message": "Invalid provider for Category 1"}, 400
         current_app.logger.info(f"Using provider: {provider.to_dict()}")
         service = Category1Service(provider)
@@ -107,11 +105,8 @@ class Category1Recharge(Resource):
         if data is None:
             return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider:
-            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
-            return {"message": "Invalid provider for Category 1"}, 400
-        if provider.category.name != 'CATEGORY1':
-            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
+        if not provider or provider.category.name != 'CATEGORY1':
+            current_app.logger.error(f"Invalid provider for ID: {data.get('provider_id')}")
             return {"message": "Invalid provider for Category 1"}, 400
         service = Category1Service(provider)
         result = service.recharge(data['username'], data['amount'])
@@ -128,11 +123,8 @@ class Category1Redeem(Resource):
         if data is None:
             return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider:
-            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
-            return {"message": "Invalid provider for Category 1"}, 400
-        if provider.category.name != 'CATEGORY1':
-            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
+        if not provider or provider.category.name != 'CATEGORY1':
+            current_app.logger.error(f"Invalid provider for ID: {data.get('provider_id')}")
             return {"message": "Invalid provider for Category 1"}, 400
         service = Category1Service(provider)
         result = service.redeem(data['username'], data['amount'])
@@ -149,11 +141,8 @@ class Category1ResetPassword(Resource):
         if data is None:
             return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider:
-            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
-            return {"message": "Invalid provider for Category 1"}, 400
-        if provider.category.name != 'CATEGORY1':
-            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
+        if not provider or provider.category.name != 'CATEGORY1':
+            current_app.logger.error(f"Invalid provider for ID: {data.get('provider_id')}")
             return {"message": "Invalid provider for Category 1"}, 400
         service = Category1Service(provider)
         result = service.change_password(data['username'], data['new_password'])
@@ -170,11 +159,8 @@ class Category1Balance(Resource):
         if data is None:
             return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider:
-            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
-            return {"message": "Invalid provider for Category 1"}, 400
-        if provider.category.name != 'CATEGORY1':
-            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
+        if not provider or provider.category.name != 'CATEGORY1':
+            current_app.logger.error(f"Invalid provider for ID: {data.get('provider_id')}")
             return {"message": "Invalid provider for Category 1"}, 400
         service = Category1Service(provider)
         result = service.get_balances(data['username'])
@@ -191,11 +177,8 @@ class Category1AgentBalance(Resource):
         if data is None:
             return {"message": "Request body is missing or invalid", "error": "Please provide a valid JSON payload"}, 400
         provider = Provider.query.get(data['provider_id'])
-        if not provider:
-            current_app.logger.error(f"No provider found for ID: {data['provider_id']}")
-            return {"message": "Invalid provider for Category 1"}, 400
-        if provider.category.name != 'CATEGORY1':
-            current_app.logger.error(f"Provider {provider.id} category mismatch: {provider.category}")
+        if not provider or provider.category.name != 'CATEGORY1':
+            current_app.logger.error(f"Invalid provider for ID: {data.get('provider_id')}")
             return {"message": "Invalid provider for Category 1"}, 400
         service = Category1Service(provider)
         result = service.get_agent_balance()
