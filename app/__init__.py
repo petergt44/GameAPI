@@ -1,19 +1,25 @@
 """
-Initialization file for the Flask application.
-Sets up the Flask app, database, migrations, and blueprints.
+Flask application initialization module.
+
+This module sets up the Flask application with all necessary extensions,
+security configurations, and route registrations following best practices.
 """
 
-from flask import Flask, request, render_template
+import logging
+import json
+from typing import Optional
+from flask import Flask, request, render_template, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager, UserMixin
 from flask_cors import CORS
-from config import Config
 from flask_restx import Api
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_caching import Cache
 from flask_login import login_required
-import json
+from config import Config
+
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -83,19 +89,65 @@ from app import models
 def admin_dashboard():
     return render_template('admin/dashboard.html')
 
-def create_app():
+def create_app(config_class: type = Config) -> Flask:
     """
     Factory function to create and configure the Flask application.
 
+    This function follows the application factory pattern for better
+    testability and configuration management.
+
+    Args:
+        config_class: Configuration class to use (defaults to Config).
+
     Returns:
-        Flask: The configured Flask application.
+        Configured Flask application instance.
+
+    Example:
+        >>> app = create_app(Config)
+        >>> app.run()
     """
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+
     # Initialize extensions with the app
     db.init_app(app)
-    cache.init_app(app)  # Ensure cache is initialized here
+    cache.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-    CORS(app)
+
+    # CORS configuration with security
+    CORS(
+        app,
+        resources={
+            r"/api/*": {
+                "origins": app.config.get('CORS_ORIGINS', ['*']),
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"]
+            }
+        },
+        supports_credentials=True
+    )
+
+    # Security headers middleware
+    @app.after_request
+    def set_security_headers(response):
+        """Add security headers to all responses."""
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        if not app.config.get('DEBUG'):
+            response.headers['Content-Security-Policy'] = "default-src 'self'"
+        return response
+
+    # Request logging
+    @app.before_request
+    def log_request_info():
+        """Log request information for debugging and monitoring."""
+        logger.info(
+            f"Request: {request.method} {request.path} "
+            f"from {request.remote_addr}"
+        )
 
     # Import models to ensure they are registered
     from app import models
@@ -118,12 +170,32 @@ def create_app():
     # Register Swagger UI blueprint
     app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 errors."""
+        return {'error': 'Resource not found'}, 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        """Handle 500 errors."""
+        logger.error(f"Internal server error: {error}")
+        return {'error': 'Internal server error'}, 500
+
+    logger.info("Flask application created successfully")
     return app
 
 # Create the app
 app = create_app()
 
-# Verify cache initialization (optional debugging)
+# Verify cache initialization
 with app.app_context():
-    cache.set("test_key", "test_value")
-    print("Cache test:", cache.get("test_key"))  # Should print "test_value"
+    try:
+        cache.set("test_key", "test_value", timeout=60)
+        test_value = cache.get("test_key")
+        if test_value:
+            logger.info("Cache initialized successfully")
+        else:
+            logger.warning("Cache test failed - check Redis connection")
+    except Exception as e:
+        logger.error(f"Cache initialization error: {e}")
