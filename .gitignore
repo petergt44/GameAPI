@@ -16,5 +16,5 @@ __pycache__/
 # Ignore migrations (if not using Alembic)
 # migrations/
 
-# Ignore configuration file
-config,py
+# Ignore configuration file (if it contains secrets)
+# config.py  # Uncomment if config.py contains sensitive data

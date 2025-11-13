@@ -7,7 +7,7 @@ Handles web page interactions and form submissions.
 import time
 from twocaptcha import TwoCaptcha
 from config import Config
-from .category4_service import Category4Service  # Assuming Category4Service is updated without encryption
+from .category4_service import Category4Service  # Category4Service is updated without encryption
 
 class Category5Service(Category4Service):
     CAPTCHA_API_KEY = Config.CAPTCHA_API_KEY
@@ -67,3 +67,84 @@ class Category5Service(Category4Service):
             time.sleep(retry_delay)
         self.logger.error(f"[{self.provider.name}] Max login attempts reached")
         return {"message": "Login failed", "error": "Max attempts reached or Cloudflare block"}
+
+    @BaseGameService.retry_on_failure()
+    def add_user(self, username, password):
+        payload = {"username": username, "password": password}
+        response = self._make_request("POST", "/api/users", json=payload)
+        data = response.json()
+        return {"message": "User created", "username": username} if data.get("success") else {"message": "Failed to add user", "error": data.get("error")}
+
+    @BaseGameService.retry_on_failure()
+    def recharge(self, username, amount):
+        user_id_response = self._search_user(username)
+        if not user_id_response.get("user_id"):
+            return {"message": "User not found", "error": user_id_response.get("error")}
+        user_id = user_id_response["user_id"]
+        agent_balance_response = self.get_agent_balance()
+        if not agent_balance_response.get("balance"):
+            return {"message": "Failed to get agent balance", "error": agent_balance_response.get("error")}
+        payload = {
+            "id": user_id,
+            "available_balance": agent_balance_response["balance"],
+            "opera_type": 0,
+            "bonus": 0,
+            "balance": amount,
+            "remark": ""
+        }
+        response = self._make_request("POST", "/api/player/recharge", json=payload)
+        data = response.json()
+        return {"message": "Recharged successfully"} if data.get("message") == "Recharge successful" else {"message": "Failed to recharge", "error": data.get("message")}
+
+    @BaseGameService.retry_on_failure()
+    def redeem(self, username, amount):
+        user_id_response = self._search_user(username)
+        if not user_id_response.get("user_id"):
+            return {"message": "User not found", "error": user_id_response.get("error")}
+        user_id = user_id_response["user_id"]
+        agent_balance_response = self.get_agent_balance()
+        if not agent_balance_response.get("balance"):
+            return {"message": "Failed to get agent balance", "error": agent_balance_response.get("error")}
+        payload = {
+            "id": user_id,
+            "available_balance": agent_balance_response["balance"],
+            "opera_type": 1,
+            "bonus": 0,
+            "balance": amount,
+            "remark": ""
+        }
+        response = self._make_request("POST", "/api/player/redeem", json=payload)
+        data = response.json()
+        return {"message": "Redeemed successfully"} if data.get("message") == "Redeem successful" else {"message": "Failed to redeem", "error": data.get("message")}
+
+    @BaseGameService.retry_on_failure()
+    def reset_password(self, username, new_password):
+        user_id_response = self._search_user(username)
+        if not user_id_response.get("user_id"):
+            return {"message": "User not found", "error": user_id_response.get("error")}
+        user_id = user_id_response["user_id"]
+        payload = {"id": user_id, "new_password": new_password, "confirm_password": new_password}
+        response = self._make_request("POST", "/api/player/reset_password", json=payload)
+        data = response.json()
+        return {"message": "Password reset successful"} if data.get("message") == "Password reset successful" else {"message": "Failed to reset password", "error": data.get("message")}
+
+    @BaseGameService.retry_on_failure()
+    def get_balances(self, username):
+        user_id_response = self._search_user(username)
+        if not user_id_response.get("user_id"):
+            return {"message": "User not found", "error": user_id_response.get("error")}
+        user_id = user_id_response["user_id"]
+        response = self._make_request("GET", f"/api/player/{user_id}/balance")
+        data = response.json()
+        return {"message": "Balance fetched", "balance": data["balance"]} if "balance" in data else {"message": "Failed to fetch balance", "error": "Balance not found"}
+
+    @BaseGameService.retry_on_failure()
+    def get_agent_balance(self):
+        response = self._make_request("GET", "/api/agent/balance")
+        data = response.json()
+        return {"balance": data["balance"]} if "balance" in data else {"message": "Failed to get agent balance", "error": "Balance not found"}
+
+    def _search_user(self, username):
+        response = self._make_request("GET", f"/api/users/search?username={username}")
+        data = response.json()
+        return {"user_id": data["user_id"]} if data.get("user_id") else {"error": data.get("error", "User not found")}
