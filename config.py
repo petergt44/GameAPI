@@ -18,13 +18,13 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Caching mechanism
-     # Caching configuration with Redis
+    # Caching configuration with Redis
     CACHE_TYPE = 'redis'
-    CACHE_REDIS_HOST = 'localhost'
-    CACHE_REDIS_PORT = 6379
-    CACHE_REDIS_DB = 0
-    CACHE_REDIS_URL = 'redis://localhost:6379/0'
-    CACHE_DEFAULT_TIMEOUT = 0
+    CACHE_REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+    CACHE_REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+    CACHE_REDIS_DB = int(os.getenv('REDIS_DB', 0))
+    CACHE_REDIS_URL = os.getenv('CACHE_REDIS_URL', f'redis://{os.getenv("REDIS_HOST", "localhost")}:{os.getenv("REDIS_PORT", "6379")}/{os.getenv("REDIS_DB", "0")}')
+    CACHE_DEFAULT_TIMEOUT = int(os.getenv('CACHE_DEFAULT_TIMEOUT', 300))  # 5 minutes default
 
     # TwoCaptcha Settings
     CAPTCHA_API_KEY = os.getenv("CAPTCHA_API_KEY", "your-2captcha-api-key-here")
