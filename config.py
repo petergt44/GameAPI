@@ -10,10 +10,10 @@ load_dotenv()
 class Config:
     """Configuration class for Flask app."""
     SECRET_KEY = os.getenv("SECRET_KEY", "mysecretkey")
-    # SQLALCHEMY_DATABASE_URI = f"postgresql://{os.getenv('postgres')}:{os.getenv('opensesame')}@{os.getenv('127.0.0.1')}:5432/{os.getenv('gameapi')}"
+    # Example: SQLALCHEMY_DATABASE_URI = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST', '127.0.0.1')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME')}"
     SQLALCHEMY_DATABASE_URI = os.getenv(
         "DATABASE_URL",
-        "postgresql://hacker:opensesame@127.0.0.1:5432/gameapis"
+        "postgresql://username:password@127.0.0.1:5432/gameapis"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -27,7 +27,7 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = 0
 
     # TwoCaptcha Settings
-    CAPTCHA_API_KEY = os.getenv("CAPTCHA_API_KEY", "cdfa431906375d3df98956d07371248a")
+    CAPTCHA_API_KEY = os.getenv("CAPTCHA_API_KEY", "your-2captcha-api-key-here")
 
    # Provider URLs for each category (list all providers)
     CATEGORY1_PROVIDERS = [
